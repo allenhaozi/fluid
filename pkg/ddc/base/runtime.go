@@ -38,11 +38,19 @@ type RuntimeInfoInterface interface {
 
 	GetRuntimeType() string
 
-	GetStoragetLabelname(read common.ReadType, storage common.StorageType) string
+	// GetStoragetLabelname(read common.ReadType, storage common.StorageType) string
+
+	GetLabelnameForMemory() string
+
+	GetLabelnameForDisk() string
+
+	GetLabelnameForTotal() string
 
 	GetCommonLabelname() string
 
 	GetRuntimeLabelname() string
+
+	GetPersistentVolumeName() string
 
 	IsExclusive() bool
 
@@ -51,6 +59,14 @@ type RuntimeInfoInterface interface {
 	SetupWithDataset(dataset *datav1alpha1.Dataset)
 
 	GetFuseDeployMode() (global bool, nodeSelector map[string]string)
+
+	SetDeprecatedNodeLabel(deprecated bool)
+
+	IsDeprecatedNodeLabel() bool
+
+	SetDeprecatedPVName(deprecated bool)
+
+	IsDeprecatedPVName() bool
 }
 
 // The real Runtime Info should implement
@@ -64,10 +80,16 @@ type RuntimeInfo struct {
 
 	exclusive bool
 	// Check if the runtime info is already setup by the dataset
-	setup bool
+	//setup bool
 
 	// Fuse configuration
 	fuse Fuse
+
+	// Check if the deprecated node label is used
+	deprecatedNodeLabel bool
+
+	// Check if the deprecated PV naming style is used
+	deprecatedPVName bool
 }
 
 type Fuse struct {
@@ -147,10 +169,7 @@ func (info *RuntimeInfo) IsExclusive() bool {
 
 // SetupWithDataset determines if need to setup with the info of dataset
 func (info *RuntimeInfo) SetupWithDataset(dataset *datav1alpha1.Dataset) {
-	if !info.setup {
-		info.exclusive = dataset.IsExclusiveMode()
-		info.setup = true
-	}
+	info.exclusive = dataset.IsExclusiveMode()
 }
 
 // SetupFuseDeployMode setups the fuse deploy mode
@@ -164,6 +183,24 @@ func (info *RuntimeInfo) GetFuseDeployMode() (global bool, nodeSelector map[stri
 	global = info.fuse.Global
 	nodeSelector = info.fuse.NodeSelector
 	return
+}
+
+// SetDeprecatedNodeLabel set the DeprecatedNodeLabel
+func (info *RuntimeInfo) SetDeprecatedNodeLabel(deprecated bool) {
+	info.deprecatedNodeLabel = deprecated
+}
+
+// IsDeprecatedNodeLabel checks if using deprecated node label
+func (info *RuntimeInfo) IsDeprecatedNodeLabel() bool {
+	return info.deprecatedNodeLabel
+}
+
+func (info *RuntimeInfo) SetDeprecatedPVName(deprecated bool) {
+	info.deprecatedPVName = deprecated
+}
+
+func (info *RuntimeInfo) IsDeprecatedPVName() bool {
+	return info.deprecatedPVName
 }
 
 func convertToTieredstoreInfo(tieredstore datav1alpha1.Tieredstore) (TieredstoreInfo, error) {

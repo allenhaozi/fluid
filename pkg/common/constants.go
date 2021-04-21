@@ -17,9 +17,9 @@ package common
 
 const (
 	// LabelAnnotationPrefix is the prefix of every labels and annotations added by the controller.
-	LabelAnnotationPrefix = "data.fluid.io/"
-	// The format is data.fluid.io/storage-{runtime_type}-{data_set_name}
-	LabelAnnotationStorageCapacityPrefix = LabelAnnotationPrefix + "storage-"
+	LabelAnnotationPrefix = "fluid.io/"
+	// The format is fluid.io/s-{runtime_type}-{data_set_name}, s means storage
+	LabelAnnotationStorageCapacityPrefix = LabelAnnotationPrefix + "s-"
 	// The dataset annotation
 	LabelAnnotationDataset = LabelAnnotationPrefix + "dataset"
 )
@@ -36,7 +36,11 @@ const (
 
 	TargetDatasetNotFound = "TargetDatasetNotFound"
 
+	TargetDatasetPathNotFound = "TargetDatasetPathNotFound"
+
 	TargetDatasetNotReady = "TargetDatasetNotReady"
+
+	TargetDatasetNamespaceNotSame = "TargetDatasetNamespaceNotSame"
 
 	DataLoadCollision = "DataLoadCollision"
 
@@ -53,6 +57,8 @@ const (
 	DataBackupComplete = "DataBackupComplete"
 
 	RuntimeScaleInFailed = "RuntimeScaleInFailed"
+
+	Succeed = "Succeed"
 )
 
 type CacheStoreType string
@@ -98,6 +104,10 @@ const (
 	PathScheme string = "local://"
 
 	VolumeScheme string = "pvc://"
+
+	HttpScheme string = "http://"
+
+	HttpsScheme string = "https://"
 )
 
 var (

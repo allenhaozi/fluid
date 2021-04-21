@@ -1,4 +1,4 @@
-# Adopters of Fluid 
+# Adopters of Fluid
 
 The following are the adopters of project Fluid. If you are using Fluid to simplify and accelerate your applications to access data in Kubernetes, please feel free to add yourself into the following list by a pull request. There're several phases as follow:
 
@@ -16,4 +16,8 @@ The companies/organizations are listed in alphabetical order grouped by the phas
 | [Unisound](https://www.unisound.com/)  | [@ldd91](lvdongdong@unisound.com) | Staging | Atlas Deep Learning Platform |
 | [Weibo](http://www.weibo.com/)  | [@wutong](wutong6@staff.weibo.com) | Staging | weibo deep learning platform |
 | [4Paradigm.com](http://www.4paradigm.com/)  | [@mahao](mahao@4paradigm.com) | Testing | 4Paradigm Sage EE |
+<<<<<<< HEAD
+| [TencentCloud](https://cloud.tencent.com/)  | [@xieydd](chrisydxie@tencent.com) | Testing | Tencent Kubernetes Engine |
+=======
+| [HAOMO](http://haomo.ai/)  | [@tongyan](tongyan@haomo.ai) | Testing | HAOMO Auto Machine Learning Platform |
 | [TencentCloud](https://cloud.tencent.com/)  | [@xieydd](chrisydxie@tencent.com) | Testing | Tencent Kubernetes Engine |

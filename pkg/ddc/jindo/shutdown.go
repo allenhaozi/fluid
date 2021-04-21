@@ -3,6 +3,9 @@ package jindo
 import (
 	"context"
 	"fmt"
+	"github.com/fluid-cloudnative/fluid/pkg/ddc/base/portallocator"
+	"github.com/pkg/errors"
+
 	"github.com/fluid-cloudnative/fluid/pkg/utils"
 	"github.com/fluid-cloudnative/fluid/pkg/utils/helm"
 	"github.com/fluid-cloudnative/fluid/pkg/utils/kubeclient"
@@ -14,12 +17,17 @@ import (
 // shut down the Jindo engine
 func (e *JindoEngine) Shutdown() (err error) {
 
-	err = e.invokeCleanCache()
+	/*err = e.invokeCleanCache()
+	if err != nil {
+		return
+	}*/
+
+	_, err = e.destroyWorkers(-1)
 	if err != nil {
 		return
 	}
 
-	_, err = e.destroyWorkers(-1)
+	err = e.releasePorts()
 	if err != nil {
 		return
 	}
@@ -50,6 +58,34 @@ func (e *JindoEngine) destroyMaster() (err error) {
 	return
 }
 
+func (e *JindoEngine) releasePorts() (err error) {
+	var valueConfigMapname = e.name + "-jindofs-config"
+
+	allocator, err := portallocator.GetRuntimePortAllocator()
+	if err != nil {
+		return errors.Wrap(err, "GetRuntimePortAllocator when releasePorts")
+	}
+
+	cm, err := kubeclient.GetConfigmapByName(e.Client, valueConfigMapname, e.namespace)
+	if err != nil {
+		return errors.Wrap(err, "GetConfigmapByName when releasePorts")
+	}
+
+	// The value configMap is not found
+	if cm == nil {
+		e.Log.Info("value configMap not found, there might be some unreleased ports", "valueConfigMapName", valueConfigMapname)
+		return nil
+	}
+
+	portsToRelease, err := parsePortsFromConfigMap(cm)
+	if err != nil {
+		return errors.Wrap(err, "parsePortsFromConfigMap when releasePorts")
+	}
+
+	allocator.ReleaseReservedPorts(portsToRelease)
+	return nil
+}
+
 // cleanAll cleans up the all
 func (e *JindoEngine) cleanAll() (err error) {
 	var (
@@ -72,18 +108,23 @@ func (e *JindoEngine) cleanAll() (err error) {
 
 // destroyWorkers will delete the workers by number of the workers, if workers is -1, it means all the workers are deleted
 func (e *JindoEngine) destroyWorkers(expectedWorkers int32) (currentWorkers int32, err error) {
-	var (
-		nodeList *corev1.NodeList = &corev1.NodeList{}
+	runtimeInfo, err := e.getRuntimeInfo()
+	if err != nil {
+		return currentWorkers, err
+	}
 
-		labelName          = e.getRuntimeLabelname()
-		labelCommonName    = e.getCommonLabelname()
-		labelMemoryName    = e.getStoragetLabelname(humanReadType, memoryStorageType)
-		labelDiskName      = e.getStoragetLabelname(humanReadType, diskStorageType)
-		labelTotalname     = e.getStoragetLabelname(humanReadType, totalStorageType)
+	var (
+		nodeList           = &corev1.NodeList{}
 		labelExclusiveName = utils.GetExclusiveKey()
+		labelName          = runtimeInfo.GetRuntimeLabelname()
+		labelCommonName    = runtimeInfo.GetCommonLabelname()
+		labelMemoryName    = runtimeInfo.GetLabelnameForMemory()
+		labelDiskName      = runtimeInfo.GetLabelnameForDisk()
+		labelTotalname     = runtimeInfo.GetLabelnameForTotal()
 	)
 
 	labelNames := []string{labelName, labelTotalname, labelDiskName, labelMemoryName, labelCommonName}
+	e.Log.Info("check node labels", "labelNames", labelNames)
 	datasetLabels, err := labels.Parse(fmt.Sprintf("%s=true", labelCommonName))
 	if err != nil {
 		return

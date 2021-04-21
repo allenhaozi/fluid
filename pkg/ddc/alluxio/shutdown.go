@@ -18,6 +18,8 @@ package alluxio
 import (
 	"context"
 	"fmt"
+	"github.com/fluid-cloudnative/fluid/pkg/ddc/base/portallocator"
+	"github.com/pkg/errors"
 	"sort"
 	"strings"
 	"time"
@@ -54,6 +56,11 @@ func (e *AlluxioEngine) Shutdown() (err error) {
 	}
 
 	err = e.destroyMaster()
+	if err != nil {
+		return
+	}
+
+	err = e.releasePorts()
 	if err != nil {
 		return
 	}
@@ -138,6 +145,33 @@ func (e *AlluxioEngine) cleanupCache() (err error) {
 	return fmt.Errorf("the remaining cached is not cleaned up, check again")
 }
 
+func (e *AlluxioEngine) releasePorts() (err error) {
+	var valueConfigMapName = e.getConfigmapName()
+
+	allocator, err := portallocator.GetRuntimePortAllocator()
+	if err != nil {
+		return errors.Wrap(err, "GetRuntimePortAllocator when releasePorts")
+	}
+
+	cm, err := kubeclient.GetConfigmapByName(e.Client, valueConfigMapName, e.namespace)
+	if err != nil {
+		return errors.Wrap(err, "GetConfigmapByName when releasePorts")
+	}
+
+	// The value configMap is not found
+	if cm == nil {
+		return nil
+	}
+
+	portsToRelease, err := parsePortsFromConfigMap(cm)
+	if err != nil {
+		return errors.Wrap(err, "parsePortsFromConfigMap when releasePorts")
+	}
+
+	allocator.ReleaseReservedPorts(portsToRelease)
+	return nil
+}
+
 // cleanAll cleans up the all
 func (e *AlluxioEngine) cleanAll() (err error) {
 	var (
@@ -161,18 +195,24 @@ func (e *AlluxioEngine) cleanAll() (err error) {
 // destroyWorkers attempts to delete the workers until worker num reaches the given expectedWorkers, if expectedWorkers is -1, it means all the workers should be deleted
 // This func returns currentWorkers representing how many workers are left after this process.
 func (e *AlluxioEngine) destroyWorkers(expectedWorkers int32) (currentWorkers int32, err error) {
-	var (
-		nodeList = &corev1.NodeList{}
+	runtimeInfo, err := e.getRuntimeInfo()
+	if err != nil {
+		return currentWorkers, err
+	}
 
-		labelName          = e.getRuntimeLabelname()
-		labelCommonName    = e.getCommonLabelname()
-		labelMemoryName    = e.getStoragetLabelname(humanReadType, memoryStorageType)
-		labelDiskName      = e.getStoragetLabelname(humanReadType, diskStorageType)
-		labelTotalname     = e.getStoragetLabelname(humanReadType, totalStorageType)
+	var (
+		nodeList           = &corev1.NodeList{}
 		labelExclusiveName = utils.GetExclusiveKey()
+		labelName          = runtimeInfo.GetRuntimeLabelname()
+		labelCommonName    = runtimeInfo.GetCommonLabelname()
+		labelMemoryName    = runtimeInfo.GetLabelnameForMemory()
+		labelDiskName      = runtimeInfo.GetLabelnameForDisk()
+		labelTotalname     = runtimeInfo.GetLabelnameForTotal()
 	)
 
 	labelNames := []string{labelName, labelTotalname, labelDiskName, labelMemoryName, labelCommonName}
+	e.Log.Info("check node labels", "labelNames", labelNames)
+
 	datasetLabels, err := labels.Parse(fmt.Sprintf("%s=true", labelCommonName))
 	if err != nil {
 		return currentWorkers, err
@@ -194,7 +234,7 @@ func (e *AlluxioEngine) destroyWorkers(expectedWorkers int32) (currentWorkers in
 
 	var nodes []corev1.Node
 	if expectedWorkers >= 0 {
-		e.Log.V(1).Info("Scale in Alluxio workers", "expectedWorkers", expectedWorkers)
+		e.Log.Info("Scale in Alluxio workers", "expectedWorkers", expectedWorkers)
 		// This is a scale in operation
 		runtimeInfo, err := e.getRuntimeInfo()
 		if err != nil {

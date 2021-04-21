@@ -26,7 +26,9 @@ func CreatePersistentVolumeForRuntime(client client.Client,
 		return err
 	}
 
-	found, err := kubeclient.IsPersistentVolumeExist(client, runtime.GetName(), common.ExpectedFluidAnnotations)
+	pvName := runtime.GetPersistentVolumeName()
+
+	found, err := kubeclient.IsPersistentVolumeExist(client, pvName, common.ExpectedFluidAnnotations)
 	if err != nil {
 		return err
 	}
@@ -34,7 +36,7 @@ func CreatePersistentVolumeForRuntime(client client.Client,
 	if !found {
 		pv := &v1.PersistentVolume{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      runtime.GetName(),
+				Name:      pvName,
 				Namespace: runtime.GetNamespace(),
 				Labels: map[string]string{
 					runtime.GetCommonLabelname(): "true",
@@ -50,7 +52,7 @@ func CreatePersistentVolumeForRuntime(client client.Client,
 				PersistentVolumeSource: v1.PersistentVolumeSource{
 					CSI: &v1.CSIPersistentVolumeSource{
 						Driver:       common.CSI_DRIVER,
-						VolumeHandle: runtime.GetName(),
+						VolumeHandle: pvName,
 						VolumeAttributes: map[string]string{
 							common.FLUID_PATH: mountPath,
 							common.Mount_TYPE: mountType,
@@ -121,7 +123,7 @@ func CreatePersistentVolumeForRuntime(client client.Client,
 			return err
 		}
 	} else {
-		log.Info("The persistent volume is created", "name", runtime.GetName())
+		log.Info("The persistent volume is created", "name", pvName)
 	}
 
 	return err

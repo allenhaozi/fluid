@@ -41,7 +41,14 @@ func (e *JindoEngine) CreateVolume() (err error) {
 // createFusePersistentVolume
 func (e *JindoEngine) createFusePersistentVolume() (err error) {
 
-	found, err := kubeclient.IsPersistentVolumeExist(e.Client, e.runtime.Name, expectedAnnotations)
+	runtime, err := e.getRuntimeInfo()
+	if err != nil {
+		return err
+	}
+
+	pvName := runtime.GetPersistentVolumeName()
+
+	found, err := kubeclient.IsPersistentVolumeExist(e.Client, pvName, expectedAnnotations)
 	if err != nil {
 		return err
 	}
@@ -49,7 +56,7 @@ func (e *JindoEngine) createFusePersistentVolume() (err error) {
 	if !found {
 		pv := &corev1.PersistentVolume{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      e.runtime.Name,
+				Name:      pvName,
 				Namespace: e.runtime.Namespace,
 				Labels: map[string]string{
 					e.getCommonLabelname(): "true",
@@ -66,7 +73,7 @@ func (e *JindoEngine) createFusePersistentVolume() (err error) {
 				PersistentVolumeSource: corev1.PersistentVolumeSource{
 					CSI: &corev1.CSIPersistentVolumeSource{
 						Driver:       CSI_DRIVER,
-						VolumeHandle: e.runtime.Name,
+						VolumeHandle: pvName,
 						VolumeAttributes: map[string]string{
 							fluid_PATH: e.getMountPoint(),
 							Mount_TYPE: common.JINDO_MOUNT_TYPE,
@@ -96,7 +103,7 @@ func (e *JindoEngine) createFusePersistentVolume() (err error) {
 			return err
 		}
 	} else {
-		e.Log.Info("The persistent volume is created", "name", e.runtime.Name)
+		e.Log.Info("The persistent volume is created", "name", pvName)
 	}
 
 	return err

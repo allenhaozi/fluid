@@ -18,11 +18,12 @@ package alluxio
 import (
 	"errors"
 	"fmt"
-	"github.com/fluid-cloudnative/fluid/pkg/common"
+	"github.com/fluid-cloudnative/fluid/pkg/ddc/base/portallocator"
 	"os"
 	"strings"
 
 	datav1alpha1 "github.com/fluid-cloudnative/fluid/api/v1alpha1"
+	"github.com/fluid-cloudnative/fluid/pkg/common"
 	"github.com/fluid-cloudnative/fluid/pkg/utils"
 	"github.com/fluid-cloudnative/fluid/pkg/utils/tieredstore"
 )
@@ -81,11 +82,20 @@ func (e *AlluxioEngine) transform(runtime *datav1alpha1.AlluxioRuntime) (value *
 	// 8.set optimization parameters
 	e.optimizeDefaultProperties(runtime, value)
 
-	// 9.allocate port for fluid engine
-	err = e.allocatePorts(value)
+	// 9. set optimization parameters if all the mounts are HTTP
+	e.optimizeDefaultPropertiesAndFuseForHTTP(runtime, dataset, value)
 
-	// 10.set engine properties
+	// 10.allocate port for fluid engine
+	err = e.allocatePorts(value)
+	if err != nil {
+		return
+	}
+
+	// 11.set engine properties
 	e.setPortProperties(runtime, value)
+
+	// 12.set API Gateway
+	err = e.transformAPIGateway(runtime, value)
 	return
 }
 
@@ -348,24 +358,111 @@ func (e *AlluxioEngine) transformWorkers(runtime *datav1alpha1.AlluxioRuntime, v
 
 // 8.allocate port for fluid engine
 func (e *AlluxioEngine) allocatePorts(value *Alluxio) error {
-	allocatedPorts, err := e.getAvaliablePort()
+	expectedPortNum := PORT_NUM
 
-	if len(allocatedPorts) == PORT_NUM {
-		value.Master.Ports.Rpc = allocatedPorts[0]
-		value.Master.Ports.Web = allocatedPorts[1]
-		value.Worker.Ports.Rpc = allocatedPorts[2]
-		value.Worker.Ports.Web = allocatedPorts[3]
-		value.JobMaster.Ports.Rpc = allocatedPorts[4]
-		value.JobMaster.Ports.Web = allocatedPorts[5]
-		value.JobWorker.Ports.Rpc = allocatedPorts[6]
-		value.JobWorker.Ports.Web = allocatedPorts[7]
-		value.JobWorker.Ports.Data = allocatedPorts[8]
-	} else {
-		value.Master.Ports.Embedded = allocatedPorts[9]
-		value.JobMaster.Ports.Embedded = allocatedPorts[10]
+	if e.runtime.Spec.APIGateway.Enabled {
+		expectedPortNum += 1
 	}
 
-	return err
+	if e.runtime.Spec.Master.Replicas > 1 {
+		expectedPortNum += 2
+	}
+
+	allocator, err := portallocator.GetRuntimePortAllocator()
+	if err != nil {
+		e.Log.Error(err, "can't get runtime port allocator")
+		return err
+	}
+
+	allocatedPorts, err := allocator.GetAvailablePorts(expectedPortNum)
+	if err != nil {
+		e.Log.Error(err, "can't get available ports", "expected port num", expectedPortNum)
+		return err
+	}
+
+	index := 0
+	value.Master.Ports.Rpc = allocatedPorts[index]
+	index++
+	value.Master.Ports.Web = allocatedPorts[index]
+	index++
+	value.Worker.Ports.Rpc = allocatedPorts[index]
+	index++
+	value.Worker.Ports.Web = allocatedPorts[index]
+	index++
+	value.JobMaster.Ports.Rpc = allocatedPorts[index]
+	index++
+	value.JobMaster.Ports.Web = allocatedPorts[index]
+	index++
+	value.JobWorker.Ports.Rpc = allocatedPorts[index]
+	index++
+	value.JobWorker.Ports.Web = allocatedPorts[index]
+	index++
+	value.JobWorker.Ports.Data = allocatedPorts[index]
+	index++
+
+	if e.runtime.Spec.APIGateway.Enabled {
+		value.APIGateway.Ports.Rest = allocatedPorts[index]
+		index++
+	}
+
+	if e.runtime.Spec.Master.Replicas > 1 {
+		value.Master.Ports.Embedded = allocatedPorts[index]
+		index++
+		value.JobMaster.Ports.Embedded = allocatedPorts[index]
+	}
+
+	//allocatedPorts, err := e.getAvaliablePort()
+
+	//check the length ports
+	//if len(allocatedPorts) < PORT_NUM {
+	//	e.Log.Info("the number of port check failed",
+	//		"PORT_NUM", PORT_NUM,
+	//		"len(allocatedPorts)", len(allocatedPorts),
+	//		"allocatedPorts", allocatedPorts)
+	//	return fmt.Errorf("The lengh of port list is %v less than expected %v", len(allocatedPorts), PORT_NUM)
+	//}
+	//
+	//// if len(allocatedPorts) == PORT_NUM {
+	//value.Master.Ports.Rpc = allocatedPorts[0]
+	//value.Master.Ports.Web = allocatedPorts[1]
+	//value.Worker.Ports.Rpc = allocatedPorts[2]
+	//value.Worker.Ports.Web = allocatedPorts[3]
+	//value.JobMaster.Ports.Rpc = allocatedPorts[4]
+	//value.JobMaster.Ports.Web = allocatedPorts[5]
+	//value.JobWorker.Ports.Rpc = allocatedPorts[6]
+	//value.JobWorker.Ports.Web = allocatedPorts[7]
+	//value.JobWorker.Ports.Data = allocatedPorts[8]
+	//
+	//index := 9
+	//if e.runtime.Spec.APIGateway.Enabled {
+	//	if len(allocatedPorts) <= index {
+	//		e.Log.Info("the number of port check failed, when api gateway is enabled",
+	//			"PORT_NUM", index+1,
+	//			"len(allocatedPorts)", len(allocatedPorts),
+	//			"allocatedPorts", allocatedPorts)
+	//		return fmt.Errorf("The lengh of port list is %v less than expected %v", len(allocatedPorts), PORT_NUM)
+	//	}
+	//	value.APIGateway.Ports.Rest = allocatedPorts[index]
+	//}
+	//
+	//if e.runtime.Spec.Master.Replicas > 1 {
+	//	if len(allocatedPorts) <= index+2 {
+	//		e.Log.Info("the number of port check failed, when Embedded is enabled",
+	//			"index", index+2,
+	//			"len(allocatedPorts)", len(allocatedPorts),
+	//			"allocatedPorts", allocatedPorts)
+	//		return fmt.Errorf("The lengh of port list is %v less than expected %v", len(allocatedPorts), PORT_NUM)
+	//	}
+	//	value.Master.Ports.Embedded = allocatedPorts[index+1]
+	//	value.Master.Ports.Embedded = allocatedPorts[index+2]
+	//}
+	//
+	//// } else {
+	//// 	value.Master.Ports.Embedded = allocatedPorts[9]
+	//// 	value.JobMaster.Ports.Embedded = allocatedPorts[10]
+	//// }
+
+	return nil
 }
 
 // // 8.set default port for fluid engine

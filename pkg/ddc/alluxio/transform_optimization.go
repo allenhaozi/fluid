@@ -16,7 +16,9 @@ limitations under the License.
 package alluxio
 
 import (
+	"github.com/fluid-cloudnative/fluid/pkg/common"
 	"strconv"
+	"strings"
 
 	datav1alpha1 "github.com/fluid-cloudnative/fluid/api/v1alpha1"
 	"github.com/fluid-cloudnative/fluid/pkg/utils"
@@ -112,6 +114,29 @@ func (e *AlluxioEngine) optimizeDefaultProperties(runtime *datav1alpha1.AlluxioR
 	}
 }
 
+// optimizeDefaultPropertiesAndFuseForHTTP sets the default value for properties and fuse when the mounts are all HTTP.
+func (e *AlluxioEngine) optimizeDefaultPropertiesAndFuseForHTTP(runtime *datav1alpha1.AlluxioRuntime, dataset *datav1alpha1.Dataset, value *Alluxio) {
+	var isHTTP = true
+	for _, mount := range dataset.Spec.Mounts {
+		// the mount is not http
+		if !(strings.HasPrefix(mount.MountPoint, common.HttpScheme) || strings.HasPrefix(mount.MountPoint, common.HttpsScheme)) {
+			isHTTP = false
+			break
+		}
+	}
+
+	if isHTTP {
+		setDefaultProperties(runtime, value, "alluxio.user.block.size.bytes.default", "256MB")
+		setDefaultProperties(runtime, value, "alluxio.user.streaming.reader.chunk.size.bytes", "256MB")
+		setDefaultProperties(runtime, value, "alluxio.user.local.reader.chunk.size.bytes", "256MB")
+		setDefaultProperties(runtime, value, "alluxio.worker.network.reader.buffer.size", "256MB")
+		setDefaultProperties(runtime, value, "alluxio.user.streaming.data.timeout", "300sec")
+		if len(runtime.Spec.Fuse.Args) == 0 {
+			value.Fuse.Args[1] = strings.Join([]string{value.Fuse.Args[1], "max_readahead=0"}, ",")
+		}
+	}
+}
+
 func setDefaultProperties(runtime *datav1alpha1.AlluxioRuntime, alluxioValue *Alluxio, key string, value string) {
 	if _, found := runtime.Spec.Properties[key]; !found {
 		alluxioValue.Properties[key] = value
@@ -128,6 +153,10 @@ func (e *AlluxioEngine) setPortProperties(runtime *datav1alpha1.AlluxioRuntime, 
 	setDefaultProperties(runtime, value, "alluxio.job.worker.rpc.port", strconv.Itoa(value.JobWorker.Ports.Rpc))
 	setDefaultProperties(runtime, value, "alluxio.job.worker.web.port", strconv.Itoa(value.JobWorker.Ports.Web))
 	setDefaultProperties(runtime, value, "alluxio.job.worker.data.port", strconv.Itoa(value.JobWorker.Ports.Data))
+	if runtime.Spec.APIGateway.Enabled {
+		setDefaultProperties(runtime, value, "alluxio.proxy.web.port", strconv.Itoa(value.APIGateway.Ports.Rest))
+	}
+
 	if value.Master.Ports.Embedded != 0 && value.JobMaster.Ports.Embedded != 0 {
 		setDefaultProperties(runtime, value, "alluxio.master.embedded.journal.port", strconv.Itoa(value.Master.Ports.Embedded))
 		setDefaultProperties(runtime, value, "alluxio.job.master.embedded.journal.port", strconv.Itoa(value.JobMaster.Ports.Embedded))
