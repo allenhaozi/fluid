@@ -17,27 +17,23 @@ package main
 
 import (
 	"fmt"
-	"github.com/fluid-cloudnative/fluid"
-	alluxioctl "github.com/fluid-cloudnative/fluid/pkg/controllers/v1alpha1/alluxio"
-	"github.com/fluid-cloudnative/fluid/pkg/ddc/base/portallocator"
-	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/util/net"
 	"os"
 
-	"go.uber.org/zap/zapcore"
-
+	"github.com/fluid-cloudnative/fluid"
+	datav1alpha1 "github.com/fluid-cloudnative/fluid/api/v1alpha1"
+	alluxioctl "github.com/fluid-cloudnative/fluid/pkg/controllers/v1alpha1/alluxio"
+	"github.com/fluid-cloudnative/fluid/pkg/ddc/alluxio"
+	"github.com/fluid-cloudnative/fluid/pkg/ddc/base"
+	"github.com/fluid-cloudnative/fluid/pkg/ddc/base/portallocator"
+	"github.com/spf13/cobra"
 	zapOpt "go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/net"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	// +kubebuilder:scaffold:imports
-
-	datav1alpha1 "github.com/fluid-cloudnative/fluid/api/v1alpha1"
-	"github.com/fluid-cloudnative/fluid/pkg/ddc/alluxio"
-	"github.com/fluid-cloudnative/fluid/pkg/ddc/base"
 )
 
 var (

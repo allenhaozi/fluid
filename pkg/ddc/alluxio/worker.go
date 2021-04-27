@@ -18,13 +18,14 @@ package alluxio
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	datav1alpha1 "github.com/fluid-cloudnative/fluid/api/v1alpha1"
 	"github.com/fluid-cloudnative/fluid/pkg/common"
 	"github.com/fluid-cloudnative/fluid/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
-	"reflect"
 )
 
 // SetupWorkers checks the desired and current replicas of workers and makes an update
@@ -32,6 +33,7 @@ import (
 // calls for a status update and finally returns error if anything unexpected happens.
 func (e *AlluxioEngine) SetupWorkers() (err error) {
 	runtime, err := e.getRuntime()
+
 	if err != nil {
 		e.Log.Error(err, "setupWorker")
 		return err

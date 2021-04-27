@@ -3,18 +3,16 @@ package lifecycle
 import (
 	"context"
 	"fmt"
+
+	datav1alpha1 "github.com/fluid-cloudnative/fluid/api/v1alpha1"
+	"github.com/fluid-cloudnative/fluid/pkg/ddc/base"
 	"github.com/fluid-cloudnative/fluid/pkg/utils"
+	"github.com/fluid-cloudnative/fluid/pkg/utils/kubeclient"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	datav1alpha1 "github.com/fluid-cloudnative/fluid/api/v1alpha1"
-	// "github.com/fluid-cloudnative/fluid/pkg/utils"
-
-	"github.com/fluid-cloudnative/fluid/pkg/ddc/base"
-	"github.com/fluid-cloudnative/fluid/pkg/utils/kubeclient"
 )
 
 func AssignDatasetToNodes(runtimeInfo base.RuntimeInfoInterface,
@@ -124,6 +122,7 @@ func AssignDatasetToNodes(runtimeInfo base.RuntimeInfoInterface,
 
 		if !AlreadyAssigned(runtimeInfo, node) {
 			if !CanbeAssigned(runtimeInfo, node) {
+				// TODO the error msg is not clearly
 				log.Info("Node is skipped because it is not assigned and also can't be assigned", "node", node.Name)
 				continue
 			} else {

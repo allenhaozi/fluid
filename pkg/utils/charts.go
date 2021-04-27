@@ -39,6 +39,7 @@ func GetChartsDirectory() string {
 		return chartFolder
 	}
 	homeChartsFolder := os.Getenv("HOME") + "/charts"
+	homeChartsFolder = "/Users/mahao/go/src/github.com/allenhaozi/fluid/charts"
 	if !PathExists(homeChartsFolder) {
 		chartFolder = "/charts"
 	} else {
