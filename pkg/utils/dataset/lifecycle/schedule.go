@@ -1,8 +1,24 @@
+/*
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package lifecycle
 
 import (
 	"context"
 	"fmt"
+
 	"github.com/fluid-cloudnative/fluid/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -58,7 +74,7 @@ func AssignDatasetToNodes(runtimeInfo base.RuntimeInfoInterface,
 
 	pvcMountNodesMap, err := kubeclient.GetPvcMountNodes(runtimeClient, dataset.Name, dataset.Namespace)
 	if err != nil {
-		log.Error(err, "Failed to get PVC Mount Nodes, will treat every node as with no PVC mount Pods")
+		log.Error(err, "Failed to get PVC Mount Nodes, will treat every node as no PVC mount Pods")
 	}
 
 	var nodes []corev1.Node
@@ -159,7 +175,7 @@ func AssignDatasetToNodes(runtimeInfo base.RuntimeInfoInterface,
 	return
 }
 
-// sortNodesToBeScheduled will sort nodes to be scheduled when scale up
+// sortNodesToBeScheduled sorts nodes to be scheduled when scale up
 func sortNodesToBeScheduled(nodes []corev1.Node, pvcMountNodesMap map[string]int64, nodeSelector map[string]string) []corev1.Node {
 	var (
 		// There are three slices which have different priorities
