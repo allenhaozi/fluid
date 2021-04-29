@@ -16,8 +16,5 @@ The companies/organizations are listed in alphabetical order grouped by the phas
 | [Platform of Artificial Intelligence On Alibaba Cloud](https://www.aliyun.com/product/bigdata/product/learn)  | [@2sin18](yuanman.ym@alibaba-inc.com) | Staging  | PAI Deep Learning Containers |
 | [Unisound](https://www.unisound.com/)  | [@ldd91](lvdongdong@unisound.com) | Staging | Atlas Deep Learning Platform |
 | [4Paradigm.com](http://www.4paradigm.com/)  | [@mahao](mahao@4paradigm.com) | Testing | 4Paradigm Sage EE |
-<<<<<<< HEAD
-| [TencentCloud](https://cloud.tencent.com/)  | [@xieydd](chrisydxie@tencent.com) | Testing | Tencent Kubernetes Engine |
-=======
 | [HAOMO](http://haomo.ai/)  | [@tongyan](tongyan@haomo.ai) | Testing | HAOMO Auto Machine Learning Platform |
 | [TencentCloud](https://cloud.tencent.com/)  | [@xieydd](chrisydxie@tencent.com) | Testing | Tencent Kubernetes Engine |
